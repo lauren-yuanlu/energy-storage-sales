@@ -4,7 +4,7 @@
     <div>
       <img
         class="poster"
-        src="@/assets/img/poster.jpg"
+        :src="poster"
         alt=""
       />
     </div>
@@ -37,7 +37,7 @@
       <div class="paymentAmount">
         <span>支付金额</span>
         <br>
-        <span class="amount">￥1998</span>
+        <span class="amount">￥{{amount}}</span>
       </div>
       <!-- 填写内容 -->
       <div class="fillContent">
@@ -94,10 +94,10 @@
       <div class="btn">
         <van-button class="btnPay bold" block 
           :disabled="
-          selectedInvoiceType == '增值税专用发票' ? customerName == '' || customerTel == '' || location == '' || detailedAddress == '' || 
+          selectedInvoiceType == '增值税专用发票' ? customerName == '' || customerTel == '' || location == '' || detailedAddress == '' || sign ||
           companyName == '' || identificationNum == '' || registeredAddress == '' || registeredTel == '' || bank == '' || bankAccount == '' : 
-          (selectedInvoiceHeader == '个人' || isCheckedInvoiceHeader == 0 ? customerName == '' || customerTel == '' || location == '' || detailedAddress == '' || personalName == '' :
-           customerName == '' || customerTel == '' || location == '' || detailedAddress == '' || companyName == '' || identificationNum == '')"
+          (selectedInvoiceHeader == '个人' || isCheckedInvoiceHeader == 0 ? customerName == '' || customerTel == '' || location == '' || detailedAddress == '' || sign || personalName == '' :
+           customerName == '' || customerTel == '' || location == '' || detailedAddress == '' || sign || companyName == '' || identificationNum == '')"
           @click="pay"
         >
           立即支付
@@ -115,29 +115,40 @@
         <van-area :area-list="areaList" @cancel="cancel" @confirm="confirm"/>
       </van-popup>
     </div>
+
+    <form id="submitForm" action="" method="post"></form>
   </div>
 </template>
 
 <script>
-import { Field, Button, Popup, Area } from 'vant';
-// import {
-//   getConfig
-// } from "@/api/energyStorageSales";
+import { Field, Button, Popup, Area, Picker } from 'vant';
+import {
+  getProductById,
+  placeOrder,
+  getConfig
+} from "@/api/energyStorageSales";
 // import wx from 'weixin-js-sdk';
+import { areaList } from '@vant/area-data';
 
 export default {
   components: {
     [Field.name]: Field,
     [Button.name]: Button,
     [Popup.name]: Popup,
-    [Area.name]: Area 
+    [Area.name]: Area,
+    [Picker.name]: Picker,
   },
   data() {
     return {
-      startDate: "10月20日",
-      endDate: "10月31日",
+      poster: "",
+      startDate: "2022-10-28",
+      endDate: "2022-11-11",
+      amount: "",
       customerName: "",
       customerTel: "",
+      province: "",
+      city: "",
+      area: "",
       location: "",
       detailedAddress: "",
       paymentAmount: "",
@@ -183,21 +194,8 @@ export default {
       selectedInvoiceType: "普通发票",
       selectedInvoiceHeader: "个人",
       isShowArea: false,
-      areaList: {
-        province_list: {
-          province1: '北京市',
-          province2: '天津市',
-        },
-        city_list: {
-          province1_city1: '北京市',
-          province2_city2: '天津市',
-        },
-        county_list: {
-          province1_city1_country1: '东城区',
-          province1_city1_country2: '西城区',
-          // ....
-        }
-      }
+      areaList,
+      sign: true
     }
   },
   created() {
@@ -212,6 +210,17 @@ export default {
     //   this.getCodeApi();
     // }
     // this.initWxConfig()
+    this.toGetProductById()
+    // let params =  {
+    //   id: "3"
+    //   // id: this.$route.query.id
+    // }
+    // getProductById(params).then(res => {
+    //   this.poster = "http://wx.lsh-cat.com:8901/commons/oss/getFile?bucketName=blueparts&fileKey=" + res.data.data.productPics
+    //   this.startDate = /\d{4}-\d{1,2}-\d{1,2}/g.exec(res.data.data.startTime)[0]
+    //   this.endDate = /\d{4}-\d{1,2}-\d{1,2}/g.exec(res.data.data.endTime)[0]
+    //   this.amount = res.data.data.eventPrice
+    // })
   },
   methods: {
     // getCodeApi(){//获取code   
@@ -225,9 +234,10 @@ export default {
     // initWxConfig() {
     //   let params = {
     //     url: window.location.href.split('#')[0],
-    //     appCode: "replacePartSupplier"
+    //     appCode: "energy"
     //   }
     //   getConfig(params).then((res) => {
+    //     console.log("aaaaa",res);
     //     var data=res.data.data;
     //     //获取签名
     //     wx.config({
@@ -249,8 +259,130 @@ export default {
     //     console.log("res",res);
     //   });
     // },
-    pay() {
-      console.log("aaa");
+    async toGetProductById() {
+      let params =  {
+        // id: 3
+        id: this.$route.query.id
+      }
+      let res = await getProductById(params)
+      this.poster = "http://wx.lsh-cat.com:8901/commons/oss/getFile?bucketName=blueparts&fileKey=" + res.data.data.productPics
+      // this.startDate = /\d{4}-\d{1,2}-\d{1,2}/g.exec(res.data.data.startTime)[0]
+      // this.endDate = /\d{4}-\d{1,2}-\d{1,2}/g.exec(res.data.data.endTime)[0]
+      this.amount = res.data.data.eventPrice
+      this.isDuringDate()
+    },
+    async pay() {
+      let data = {
+        city: this.city,
+        contactAddress: this.detailedAddress,
+        cuName: this.customerName,
+        cuPhone: this.customerTel,
+        district: this.area,
+        invoiceAccount: this.bankAccount,
+        invoiceAddress: this.registeredAddress,
+        invoiceBank: this.bank,
+        invoiceCuName: this.companyName,
+        invoiceHeader: this.selectedInvoiceHeader,
+        invoiceIdentificationNumber: this.identificationNum,
+        invoicePhone: this.registeredTel,
+        invoiceType: this.isChecked + 1,
+        // pid: 3,
+        pid: this.$route.query.id,
+        province: this.province,
+        remark: "",
+        totalAmount: this.amount
+      }
+      let res = await placeOrder(data)
+      let url = res.data.data.msg
+      // let data1 = res.data.data
+      // let data2 = JSONObject.parseObject(data1)
+      console.log("00000",res.data.data);
+      var json_str = JSON.stringify(res.data.data.data); 
+      var json_str2 = JSON.parse(json_str);
+      var json_str3 = JSON.parse(json_str2);
+      console.log("111111",json_str3);
+      // let formData = new FormData(document.getElementById("submitForm"));
+      // for(let key in json_str3){
+      //   if(key == "subOrders") {
+      //     var obj = Object.assign({}, json_str3.subOrders[0])
+      //     formData.append(key,obj);
+      //   } else {
+      //     formData.append(key,json_str3[key]);
+      //   }
+      // }
+      // var newInput = document.createElement("input")
+      for(let key in json_str3){
+        var newInput = document.createElement("input")
+        if(key == "subOrders") {
+          var obj = Object.assign({}, json_str3.subOrders[0])
+          newInput.name = key
+          newInput.type = "text"
+          newInput.value = obj
+          document.forms[0].appendChild(newInput)
+        } else {
+          newInput.name = key
+          newInput.type = "text"
+          newInput.value = json_str3[key]
+          document.forms[0].appendChild(newInput)
+        }
+      }
+
+
+      // let divbody = document.createElement('div')
+      // divbody.innerHTML = formData   //接口返回的data是一个页面，这里将其添加进新的div
+      // document.body.appendChild(divbody)
+      // formData.forEach((value, key) => {
+      //   console.log("aaaaaaa",`key ${key}: value ${value}`);
+      // })
+      // document.getElementById("submitForm").action = url
+      // document.getElementById("submitForm").submit()
+      document.forms[0].action = url
+      document.forms[0].submit()
+
+
+    //   let config={
+    //     headers:{
+    //         "Content-Type": "multipart/form-data"
+    //     }
+    // }
+    //   this.$axios.post(url, formData, config).then(res => {
+    //     console.log("666",res);
+    //   })
+
+      // placeOrder(data).then(res => {
+      //   axios.post(res.data.msg, {
+      //     headers: {},
+      //     data: {
+
+      //     }
+      //   }).then(res => {
+
+      //   })
+      //   axios.get(BASE_URL + "/replace_part/supplier/getDeliveryDetailByTrackingNum",{
+      //   headers: {
+      //     hrid: localStorage.getItem("supplierHrid"),
+      //     name: localStorage.getItem("supplierName")
+      //   },
+      //   params: {
+      //     trackingNum: val,
+      //     demandId: this.$route.query.demandId
+      //   }
+      // }).then(res => {
+      //   this.showPopup1 = true
+      //   this.selectedData = res.data.data.deliverPartsVO
+      //   this.editShipmentNum = res.data.data.trackingNumber
+      //   this.editShipDate = res.data.data.shipDate
+      //   console.log("res",res);
+      // })
+      //   // console.log("000",res);
+      //   // var params= new FormData()
+      //   // params.append()
+      //   // alert(JSON.stringify(res))
+      //   // let divbody=document.createElement('div')
+      //   // divbody.innerHTML=res.data.data   //接口返回的data是一个页面，这里将其添加进新的div
+      //   // document.body.appendChild(divbody)
+      //   // document.forms[0].submit()   //提交表单
+      // })
       // wx.chooseWXPay({
       //   timestamp: 0, // 支付签名时间戳，注意微信 jssdk 中的所有使用 timestamp 字段均为小写。但最新版的支付后台生成签名使用的 timeStamp 字段名需大写其中的 S 字符
       //   nonceStr: '', // 支付签名随机串，不长于 32 位
@@ -305,6 +437,18 @@ export default {
     confirm(val) {
       this.isShowArea = false
       this.location = val[0].name + '-' + val[1].name + '-' + val[2].name
+      this.province = val[0].name
+      this.city = val[1].name
+      this.area = val[2].name
+    },
+    isDuringDate() {
+      var date = new Date()
+      let curDate = this.dayjs(date.toLocaleDateString()).format("YYYY-MM-DD")
+      if (curDate >= this.startDate && curDate <= this.endDate) {
+        this.sign = false
+      } else {
+        this.sign = true
+      }
     }
   }
 }
