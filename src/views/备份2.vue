@@ -6,31 +6,30 @@
         class="poster"
         :src="poster"
         alt=""
-        @load="imgLoad"
       />
     </div>
     <!-- 页面内容 -->
-    <div class="mainContent" v-if="isImgLoad">
+    <div class="mainContent">
       <!-- 有效期 -->
       <div class="validDate">
         <div class="startDate">
           <span>开始日期：{{ startDate }}</span>
           <div class="time">
-            <span class="block">{{ startHour }}</span>
+            <span class="block">00</span>
             <span class="colon">:</span>
-            <span class="block">{{ startMinute }}</span>
+            <span class="block">00</span>
             <span class="colon">:</span>
-            <span class="block">{{ startSecond }}</span>
+            <span class="block">00</span>
           </div>
         </div>
         <div class="endDate">
           <span>结束日期：{{ endDate }}</span>
           <div class="time">
-            <span class="block">{{ endHour }}</span>
+            <span class="block">23</span>
             <span class="colon">:</span>
-            <span class="block">{{ endMinute }}</span>
+            <span class="block">59</span>
             <span class="colon">:</span>
-            <span class="block">{{ endSecond }}</span>
+            <span class="block">00</span>
           </div>
         </div>
       </div>
@@ -95,10 +94,10 @@
       <div class="btn">
         <van-button class="btnPay bold" block 
           :disabled="
-          selectedInvoiceType == '增值税专用发票' ? customerName == '' || customerTel == '' || location == '' || detailedAddress == '' || sign || isDisabled ||
+          selectedInvoiceType == '增值税专用发票' ? customerName == '' || customerTel == '' || location == '' || detailedAddress == '' || sign ||
           companyName == '' || identificationNum == '' || registeredAddress == '' || registeredTel == '' || bank == '' || bankAccount == '' : 
-          (selectedInvoiceHeader == '个人' || isCheckedInvoiceHeader == 0 ? customerName == '' || customerTel == '' || location == '' || detailedAddress == '' || sign || isDisabled || personalName == '' :
-           customerName == '' || customerTel == '' || location == '' || detailedAddress == '' || sign || isDisabled || companyName == '' || identificationNum == '')"
+          (selectedInvoiceHeader == '个人' || isCheckedInvoiceHeader == 0 ? customerName == '' || customerTel == '' || location == '' || detailedAddress == '' || sign || personalName == '' :
+           customerName == '' || customerTel == '' || location == '' || detailedAddress == '' || sign || companyName == '' || identificationNum == '')"
           @click="pay"
         >
           立即支付
@@ -115,20 +114,20 @@
       >
         <van-area :area-list="areaList" @cancel="cancel" @confirm="confirm"/>
       </van-popup>
-
-      <!-- 提示框 -->
-      <van-dialog v-model="showTip" title="提示" show-cancel-button @confirm="confirmPayment">
-        确定付款吗
-      </van-dialog>
     </div>
 
-    <form id="submitForm" action="" method="post" enctype="multipart/form-data" style="display:none"></form>
+    <form id="submitForm" action="" method="post"></form>
   </div>
 </template>
 
 <script>
-import { Field, Button, Popup, Area, Dialog } from 'vant';
-import { getProductById, placeOrder } from "@/api/energyStorageSales";
+import { Field, Button, Popup, Area, Picker } from 'vant';
+import {
+  getProductById,
+  placeOrder,
+  getConfig
+} from "@/api/energyStorageSales";
+// import wx from 'weixin-js-sdk';
 import { areaList } from '@vant/area-data';
 
 export default {
@@ -137,20 +136,13 @@ export default {
     [Button.name]: Button,
     [Popup.name]: Popup,
     [Area.name]: Area,
-    [Dialog.Component.name]: Dialog.Component,
+    [Picker.name]: Picker,
   },
   data() {
     return {
       poster: "",
-      isImgLoad: false,
-      startDate: "",
-      endDate: "",
-      startHour: "",
-      startMinute: "",
-      startSecond: "",
-      endHour: "",
-      endMinute: "",
-      endSecond: "",
+      startDate: "2022-10-28",
+      endDate: "2022-11-11",
       amount: "",
       customerName: "",
       customerTel: "",
@@ -203,55 +195,234 @@ export default {
       selectedInvoiceHeader: "个人",
       isShowArea: false,
       areaList,
-      sign: true,
-      isDisabled: false,
-      showTip: false
+      sign: true
     }
   },
   created() {
-    document.title = "利星行能源产品页"
+    // let code= this.getUrlKey("code");
+    // if(code){
+    //   this.$axios.get('https://api.weixin.qq.com'+'/sns/oauth2/access_token?appid='+appid+'&secret='+appsecret+'&code='+code+'&grant_type=authorization_code')
+    //   .then(res=>{
+    //     this.openid = res.data.openid;
+    //   }).catch(error=>{
+    //   })
+    // }else{
+    //   this.getCodeApi();
+    // }
+    // this.initWxConfig()
     this.toGetProductById()
+    // let params =  {
+    //   id: "3"
+    //   // id: this.$route.query.id
+    // }
+    // getProductById(params).then(res => {
+    //   this.poster = "http://wx.lsh-cat.com:8901/commons/oss/getFile?bucketName=blueparts&fileKey=" + res.data.data.productPics
+    //   this.startDate = /\d{4}-\d{1,2}-\d{1,2}/g.exec(res.data.data.startTime)[0]
+    //   this.endDate = /\d{4}-\d{1,2}-\d{1,2}/g.exec(res.data.data.endTime)[0]
+    //   this.amount = res.data.data.eventPrice
+    // })
   },
   methods: {
-    imgLoad() {
-      this.isImgLoad = true
-    },
+    // getCodeApi(){//获取code   
+    //   let urlNow=encodeURIComponent(window.location.href);
+    //   let url= 'https://open.weixin.qq.com/connect/oauth2/authorize?appid='+appid+'&redirect_uri='+urlNow+'&response_type=code&scope=snsapi_userinfo#wechat_redirect';
+    //   window.location.href = url
+    // },
+    // getUrlKey(name){//获取url 参数
+    //   return decodeURIComponent((new RegExp('[?|&]'+name+'='+'([^&;]+?)(&|#|;|$)').exec(location.href)||[,""])[1].replace(/\+/g,'%20'))||null;
+    // },
+    // initWxConfig() {
+    //   let params = {
+    //     url: window.location.href.split('#')[0],
+    //     appCode: "energy"
+    //   }
+    //   getConfig(params).then((res) => {
+    //     console.log("aaaaa",res);
+    //     var data=res.data.data;
+    //     //获取签名
+    //     wx.config({
+    //       beta: true,// 必须这么写，否则wx.invoke调用形式的jsapi会有问题
+    //       debug: false, // 开启调试模式,调用的所有api的返回值会在客户端alert出来，若要查看传入的参数，可以在pc端打开，参数信息会通过log打出，仅在pc端时才会打印。
+    //       appId: data.appid, // 必填，企业微信的corpID
+    //       timestamp: data.timestamp, // 必填，生成签名的时间戳
+    //       nonceStr: data.nonceStr, // 必填，生成签名的随机串
+    //       signature: data.signature,// 必填，签名，见 附录-JS-SDK使用权限签名算法
+    //       jsApiList: ['chooseWXPay'] // 必填，需要使用的JS接口列表，凡是要调用的接口都需要传进来
+    //     });
+    //   })
+
+    //   wx.ready(function () {
+    //     console.log("ready");
+    //   });
+
+    //   wx.error(function (res) {
+    //     console.log("res",res);
+    //   });
+    // },
     async toGetProductById() {
       let params =  {
-        // id: 3
-        id: this.$route.query.id
+        id: 3
+        // id: this.$route.query.id
       }
       let res = await getProductById(params)
-      this.poster = "https://apiqa.lshmec.cn/4WX/commons/oss/getFile?bucketName=blueparts&fileKey=" + res.data.data.productPics
-      this.startDate = /\d{4}-\d{1,2}-\d{1,2}/g.exec(res.data.data.startTime)[0]
-      this.endDate = /\d{4}-\d{1,2}-\d{1,2}/g.exec(res.data.data.endTime)[0]
-      this.startHour = this.getZero(this.dayjs(this.startDate).hour())
-      this.startMinute = this.getZero(this.dayjs(this.startDate).minute())
-      this.startSecond = this.getZero(this.dayjs(this.startDate).second())
-      this.endHour = this.getZero(this.dayjs(this.startDate).hour())
-      this.endMinute = this.getZero(this.dayjs(this.startDate).minute())
-      this.endSecond = this.getZero(this.dayjs(this.startDate).second())
+      this.poster = "http://wx.lsh-cat.com:8901/commons/oss/getFile?bucketName=blueparts&fileKey=" + res.data.data.productPics
+      // this.startDate = /\d{4}-\d{1,2}-\d{1,2}/g.exec(res.data.data.startTime)[0]
+      // this.endDate = /\d{4}-\d{1,2}-\d{1,2}/g.exec(res.data.data.endTime)[0]
       this.amount = res.data.data.eventPrice
       this.isDuringDate()
     },
-    getZero(num) {
-      if(parseInt(num) < 10 ) {
-        num = '0' + num
-      }
-      return num
-    },
     async pay() {
-      this.showTip = true
+      let data = {
+        city: this.city,
+        contactAddress: this.detailedAddress,
+        cuName: this.customerName,
+        cuPhone: this.customerTel,
+        district: this.area,
+        invoiceAccount: this.bankAccount,
+        invoiceAddress: this.registeredAddress,
+        invoiceBank: this.bank,
+        invoiceCuName: this.companyName,
+        invoiceHeader: this.selectedInvoiceHeader,
+        invoiceIdentificationNumber: this.identificationNum,
+        invoicePhone: this.registeredTel,
+        invoiceType: this.isChecked + 1,
+        pid: 3,
+        // pid: this.$route.query.id,
+        province: this.province,
+        remark: "",
+        totalAmount: this.amount
+      }
+      let res = await placeOrder(data)
+      let url = res.data.data.msg
+      // let data1 = res.data.data
+      // let data2 = JSONObject.parseObject(data1)
+      console.log("00000",res.data.data);
+      var json_str = JSON.stringify(res.data.data.data); 
+      var json_str2 = JSON.parse(json_str);
+      var json_str3 = JSON.parse(json_str2);
+      console.log("111111",json_str3);
+      // let formData = new FormData(document.getElementById("submitForm"));
+      // for(let key in json_str3){
+      //   if(key == "subOrders") {
+      //     var obj = Object.assign({}, json_str3.subOrders[0])
+      //     formData.append(key,obj);
+      //   } else {
+      //     formData.append(key,json_str3[key]);
+      //   }
+      // }
+      // var newInput = document.createElement("input")
+
+      // for(let key in json_str3){
+      //   var newInput = document.createElement("input")
+      //   if(key == "subOrders") {
+      //     // var obj = Object.assign({}, json_str3.subOrders[0])
+      //     newInput.name = key
+      //     newInput.type = "text"
+      //     // newInput.value = obj
+      //     newInput.value = JSON.parse(json_str3.subOrders[0])
+      //     document.forms[0].appendChild(newInput)
+      //   } else {
+      //     newInput.name = key
+      //     newInput.type = "text"
+      //     newInput.value = json_str3[key]
+      //     document.forms[0].appendChild(newInput)
+      //   }
+      // }
+
+      for(let key in json_str3){
+        var newInput = document.createElement("input")
+        // if(key == "subOrders") {
+        //   newInput.name = key
+        //   newInput.type = "text"
+        //   // newInput.value = JSON.parse(json_str3.subOrders[0])
+        //   console.log("000",json_str3.subOrders[0]);
+        //   document.forms[0].appendChild(newInput)
+        // } else {
+        //   newInput.name = key
+        //   newInput.type = "text"
+        //   newInput.value = json_str3[key]
+        //   document.forms[0].appendChild(newInput)
+        // }
+        newInput.name = key
+        newInput.type = "text"
+        newInput.value = json_str3[key]
+        document.forms[0].appendChild(newInput)
+        // alert(json_str3[key])
+        console.log("00000000000000000000",json_str3[key]);
+      }
+      // document.forms[0].forEach((value, key) => {
+      //   console.log("aaaaaaa",`key ${key}: value ${value}`);
+      // })
+      // let divbody = document.createElement('div')
+      // divbody.innerHTML = formData   //接口返回的data是一个页面，这里将其添加进新的div
+      // document.body.appendChild(divbody)
+      // formData.forEach((value, key) => {
+      //   console.log("aaaaaaa",`key ${key}: value ${value}`);
+      // })
+      // document.getElementById("submitForm").action = url
+      // document.getElementById("submitForm").submit()
+      // document.forms[0].action = url
+      // document.forms[0].submit()
+
+
+    //   let config={
+    //     headers:{
+    //         "Content-Type": "multipart/form-data"
+    //     }
+    // }
+    //   this.$axios.post(url, formData, config).then(res => {
+    //     console.log("666",res);
+    //   })
+
+      // placeOrder(data).then(res => {
+      //   axios.post(res.data.msg, {
+      //     headers: {},
+      //     data: {
+
+      //     }
+      //   }).then(res => {
+
+      //   })
+      //   axios.get(BASE_URL + "/replace_part/supplier/getDeliveryDetailByTrackingNum",{
+      //   headers: {
+      //     hrid: localStorage.getItem("supplierHrid"),
+      //     name: localStorage.getItem("supplierName")
+      //   },
+      //   params: {
+      //     trackingNum: val,
+      //     demandId: this.$route.query.demandId
+      //   }
+      // }).then(res => {
+      //   this.showPopup1 = true
+      //   this.selectedData = res.data.data.deliverPartsVO
+      //   this.editShipmentNum = res.data.data.trackingNumber
+      //   this.editShipDate = res.data.data.shipDate
+      //   console.log("res",res);
+      // })
+      //   // console.log("000",res);
+      //   // var params= new FormData()
+      //   // params.append()
+      //   // alert(JSON.stringify(res))
+      //   // let divbody=document.createElement('div')
+      //   // divbody.innerHTML=res.data.data   //接口返回的data是一个页面，这里将其添加进新的div
+      //   // document.body.appendChild(divbody)
+      //   // document.forms[0].submit()   //提交表单
+      // })
+      // wx.chooseWXPay({
+      //   timestamp: 0, // 支付签名时间戳，注意微信 jssdk 中的所有使用 timestamp 字段均为小写。但最新版的支付后台生成签名使用的 timeStamp 字段名需大写其中的 S 字符
+      //   nonceStr: '', // 支付签名随机串，不长于 32 位
+      //   package: '', // 统一支付接口返回的prepay_id参数值，提交格式如：prepay_id=\*\*\*）
+      //   signType: '', // 微信支付V3的传入 RSA ,微信支付V2的传入格式与V2统一下单的签名格式保持一致
+      //   paySign: '', // 支付签名
+      //   success: function (res) {
+      //     // 支付成功后的回调函数
+      //   }
+      // });
     },
     selectInvoiceType(val, index) {
       this.isChecked = index
       this.selectedInvoiceType = val
       this.isCheckedInvoiceHeader = 0
-      if(this.selectedInvoiceType == '普通发票') {
-        this.selectedInvoiceHeader = '个人'
-      } else {
-        this.selectedInvoiceHeader = '单位'
-      }
       this.invoiceTypes.forEach(item => {
         if(val == item.type) {
           this.invoiceHeaders = item.invoiceHeader
@@ -303,61 +474,13 @@ export default {
       } else {
         this.sign = true
       }
-    },
-    async confirmPayment() {
-      let data = {
-        city: this.city,
-        contactAddress: this.detailedAddress,
-        cuName: this.customerName,
-        cuPhone: this.customerTel,
-        district: this.area,
-        invoiceAccount: this.bankAccount,
-        invoiceAddress: this.registeredAddress,
-        invoiceBank: this.bank,
-        invoiceCuName: this.selectedInvoiceHeader == '个人' ? this.personalName : this.companyName,
-        invoiceHeader: this.selectedInvoiceHeader,
-        invoiceIdentificationNumber: this.identificationNum,
-        invoicePhone: this.registeredTel,
-        invoiceType: this.isChecked + 1,
-        openid: window.sessionStorage.getItem('openid'),
-        // pid: 3,
-        pid: this.$route.query.id,
-        province: this.province,
-        remark: "",
-        totalAmount: this.amount
-      }
-
-      let res = await placeOrder(data)
-      let url = res.data.data.msg
-      var json_str = JSON.stringify(res.data.data.data); 
-      var json_str2 = JSON.parse(json_str);
-      var json_str3 = JSON.parse(json_str2);
-
-      for(let key in json_str3){
-        var newInput = document.createElement("input")
-        if(key == "subOrders") {
-          newInput.name = key
-          newInput.type = "text"
-          newInput.value = JSON.stringify(json_str3.subOrders)
-          document.forms[0].appendChild(newInput)
-        } else {
-          newInput.name = key
-          newInput.type = "text"
-          newInput.value = json_str3[key]
-          document.forms[0].appendChild(newInput)
-        }
-      }
-      document.forms[0].action = url
-      document.forms[0].submit()
-    },
+    }
   }
 }
 </script> 
 
 <style lang="less" scoped>
 .energyStorageSales {
-  // background: #000;
-  // overflow: auto;
   padding: 0 10px;
   .poster {
     width: 100%;
@@ -473,15 +596,6 @@ export default {
         border-radius: 10px;
         font-weight: bold;
       }
-    }
-    /deep/ .van-dialog__header {
-      padding-top: 20px;
-      line-height: 24px;
-    }
-    /deep/ .van-dialog__content {
-      line-height: 48px;
-      text-align: center;
-      color: #aeacaf;
     }
   }
 }

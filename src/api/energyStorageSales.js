@@ -35,3 +35,21 @@ export function placeOrder(data) {
     data
   })
 }
+
+//查询订单状态
+export function getOrderStatus(params) {
+  return request({
+    url: '/lshm_energy/cu/product/getOrderStatus',
+    method: 'get',
+    params
+  })
+}
+
+//查询订单详情(包含支付表单参数)
+export function getOrderDetail(params) {
+  return request({
+    url: '/lshm_energy/cu/product/getOrderDetail',
+    method: 'get',
+    params
+  })
+}

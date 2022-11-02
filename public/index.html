@@ -10,6 +10,21 @@
     <title><%= htmlWebpackPlugin.options.title %></title>
 
     <!-- <script src="http://res2.wx.qq.com/open/js/jweixin-1.6.0.js"></script> -->
+
+    <script type="text/javascript" charset="UTF-8" src="https://wx.gtimg.com/pay_h5/goldplan/js/jgoldplan-1.0.0.js"></script>
+    <script type="text/javascript">
+      window.onload = function () {
+        var mchData = {action: 'onIframeReady', displayStyle: 'SHOW_CUSTOM_PAGE',height:900}
+        var postData = JSON.stringify(mchData)
+        parent.postMessage(postData, 'https://payapp.weixin.qq.com')
+      }
+  
+      // function jumpOut() {
+      //     var mchData = {action: 'jumpOut', jumpOutUrl: "https://www.chinaums.com/"}
+      //     var postData = JSON.stringify(mchData)
+      //     parent.postMessage(postData, 'https://payapp.weixin.qq.com')
+      // }
+    </script>
   </head>
   <body>
     <noscript>

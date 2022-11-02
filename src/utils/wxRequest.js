@@ -3,8 +3,7 @@ import axios from 'axios'
 
 // create an axios instance
 const service = axios.create({
-    baseURL: `http://wx.lsh-cat.com:8901`,
-    // baseURL: `https://wx.lsh-cat.com`,
+    baseURL: `https://apiqa.lshmec.cn/4WX`,
     // withCredentials: true, // send cookies when cross-domain requests
     timeout: 20000 // request timeout
 })
