@@ -46,6 +46,7 @@
         <van-field v-model="customerTel" label="客户手机：" placeholder="请输入客户手机" required />
         <van-field v-model="location" label="所在地区：" placeholder="请选择所在地区" readonly required @focus="showArea"/>
         <van-field v-model="detailedAddress" label="详细地址：" placeholder="请输入详细地址" required />
+        <van-field v-model="referrer" label="推荐人：" placeholder="请输入推荐人" required />
       </div>
       <!-- 发票类型 -->
       <div class="invoice">
@@ -95,10 +96,10 @@
       <div class="btn">
         <van-button class="btnPay bold" block 
           :disabled="
-          selectedInvoiceType == '增值税专用发票' ? customerName == '' || customerTel == '' || location == '' || detailedAddress == '' || sign || isDisabled ||
+          selectedInvoiceType == '增值税专用发票' ? customerName == '' || customerTel == '' || location == '' || detailedAddress == '' || referrer == '' || sign || isDisabled ||
           companyName == '' || identificationNum == '' || registeredAddress == '' || registeredTel == '' || bank == '' || bankAccount == '' : 
-          (selectedInvoiceHeader == '个人' || isCheckedInvoiceHeader == 0 ? customerName == '' || customerTel == '' || location == '' || detailedAddress == '' || sign || isDisabled || personalName == '' :
-           customerName == '' || customerTel == '' || location == '' || detailedAddress == '' || sign || isDisabled || companyName == '' || identificationNum == '')"
+          (selectedInvoiceHeader == '个人' || isCheckedInvoiceHeader == 0 ? customerName == '' || customerTel == '' || location == '' || detailedAddress == '' || referrer == '' || sign || isDisabled || personalName == '' :
+           customerName == '' || customerTel == '' || location == '' || detailedAddress == '' || referrer == '' || sign || isDisabled || companyName == '' || identificationNum == '')"
           @click="pay"
         >
           立即支付
@@ -159,6 +160,7 @@ export default {
       area: "",
       location: "",
       detailedAddress: "",
+      referrer: "",
       paymentAmount: "",
       openid: "",
       invoiceTypes: [
@@ -308,6 +310,7 @@ export default {
       let data = {
         city: this.city,
         contactAddress: this.detailedAddress,
+        referrer: this.referrer,
         cuName: this.customerName,
         cuPhone: this.customerTel,
         district: this.area,
