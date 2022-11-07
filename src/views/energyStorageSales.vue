@@ -46,7 +46,7 @@
         <van-field v-model="customerTel" label="客户手机：" placeholder="请输入客户手机" required />
         <van-field v-model="location" label="所在地区：" placeholder="请选择所在地区" readonly required @focus="showArea"/>
         <van-field v-model="detailedAddress" label="详细地址：" placeholder="请输入详细地址" required />
-        <van-field v-model="referrer" label="推荐人：" placeholder="请输入推荐人" required />
+        <van-field v-model="referrer" label="推荐人：" placeholder="请输入推荐人" />
       </div>
       <!-- 发票类型 -->
       <div class="invoice">
@@ -96,10 +96,10 @@
       <div class="btn">
         <van-button class="btnPay bold" block 
           :disabled="
-          selectedInvoiceType == '增值税专用发票' ? customerName == '' || customerTel == '' || location == '' || detailedAddress == '' || referrer == '' || sign || isDisabled ||
+          selectedInvoiceType == '增值税专用发票' ? customerName == '' || customerTel == '' || location == '' || detailedAddress == '' || sign || isDisabled ||
           companyName == '' || identificationNum == '' || registeredAddress == '' || registeredTel == '' || bank == '' || bankAccount == '' : 
-          (selectedInvoiceHeader == '个人' || isCheckedInvoiceHeader == 0 ? customerName == '' || customerTel == '' || location == '' || detailedAddress == '' || referrer == '' || sign || isDisabled || personalName == '' :
-           customerName == '' || customerTel == '' || location == '' || detailedAddress == '' || referrer == '' || sign || isDisabled || companyName == '' || identificationNum == '')"
+          (selectedInvoiceHeader == '个人' || isCheckedInvoiceHeader == 0 ? customerName == '' || customerTel == '' || location == '' || detailedAddress == '' || sign || isDisabled || personalName == '' :
+           customerName == '' || customerTel == '' || location == '' || detailedAddress == '' || sign || isDisabled || companyName == '' || identificationNum == '')"
           @click="pay"
         >
           立即支付
@@ -146,6 +146,8 @@ export default {
       isImgLoad: false,
       startDate: "",
       endDate: "",
+      startFullDate: "",
+      endFullDate: "",
       startHour: "",
       startMinute: "",
       startSecond: "",
@@ -220,19 +222,24 @@ export default {
     },
     async toGetProductById() {
       let params =  {
-        // id: 3
+        // id: 14
         id: this.$route.query.id
       }
       let res = await getProductById(params)
-      this.poster = "https://apiqa.lshmec.cn/4WX/commons/oss/getFile?bucketName=blueparts&fileKey=" + res.data.data.productPics
+      // this.poster = "https://apiqa.lshmec.cn/4WX/commons/oss/getFile?bucketName=blueparts&fileKey=" + res.data.data.productPics  //测试
+      this.poster = "https://wx.lsh-cat.com/commons/oss/getFile?bucketName=blueparts&fileKey=" + res.data.data.productPics  //正式
       this.startDate = /\d{4}-\d{1,2}-\d{1,2}/g.exec(res.data.data.startTime)[0]
       this.endDate = /\d{4}-\d{1,2}-\d{1,2}/g.exec(res.data.data.endTime)[0]
-      this.startHour = this.getZero(this.dayjs(this.startDate).hour())
-      this.startMinute = this.getZero(this.dayjs(this.startDate).minute())
-      this.startSecond = this.getZero(this.dayjs(this.startDate).second())
-      this.endHour = this.getZero(this.dayjs(this.startDate).hour())
-      this.endMinute = this.getZero(this.dayjs(this.startDate).minute())
-      this.endSecond = this.getZero(this.dayjs(this.startDate).second())
+      this.startFullDate = res.data.data.startTime
+      this.endFullDate = res.data.data.endTime
+      
+      this.startHour = this.getZero(new Date(this.dayjs(res.data.data.startTime.toLocaleString()).format("YYYY-MM-DD HH:mm:ss").replace(/\-/g, "/")).getHours())
+      this.startMinute = this.getZero(new Date(this.dayjs(res.data.data.startTime.toLocaleString()).format("YYYY-MM-DD HH:mm:ss").replace(/\-/g, "/")).getMinutes())
+      this.startSecond = this.getZero(new Date(this.dayjs(res.data.data.startTime.toLocaleString()).format("YYYY-MM-DD HH:mm:ss").replace(/\-/g, "/")).getSeconds())
+      this.endHour = this.getZero(new Date(this.dayjs(res.data.data.endTime.toLocaleString()).format("YYYY-MM-DD HH:mm:ss").replace(/\-/g, "/")).getHours())
+      this.endMinute = this.getZero(new Date(this.dayjs(res.data.data.endTime.toLocaleString()).format("YYYY-MM-DD HH:mm:ss").replace(/\-/g, "/")).getMinutes())
+      this.endSecond = this.getZero(new Date(this.dayjs(res.data.data.endTime.toLocaleString()).format("YYYY-MM-DD HH:mm:ss").replace(/\-/g, "/")).getSeconds())
+
       this.amount = res.data.data.eventPrice
       this.isDuringDate()
     },
@@ -299,14 +306,15 @@ export default {
     },
     isDuringDate() {
       var date = new Date()
-      let curDate = this.dayjs(date.toLocaleDateString()).format("YYYY-MM-DD")
-      if (curDate >= this.startDate && curDate <= this.endDate) {
+      let curDate = this.dayjs(date.toLocaleString()).format("YYYY-MM-DD HH:mm:ss")
+      if (curDate >= this.startFullDate && curDate <= this.endFullDate) {
         this.sign = false
       } else {
         this.sign = true
       }
     },
     async confirmPayment() {
+      this.isDisabled = true
       let data = {
         city: this.city,
         contactAddress: this.detailedAddress,
@@ -330,28 +338,38 @@ export default {
         totalAmount: this.amount
       }
 
-      let res = await placeOrder(data)
-      let url = res.data.data.msg
-      var json_str = JSON.stringify(res.data.data.data); 
-      var json_str2 = JSON.parse(json_str);
-      var json_str3 = JSON.parse(json_str2);
+      let res = await placeOrder(data).catch(err => {
+        Dialog.alert({
+          message: '请求超时'
+        }).then(() => {
+        });
+        this.isDisabled = false
+      })
+      if(res.data.code != 200) {
+        this.isDisabled = false
+      } else {
+        let url = res.data.data.msg
+        var json_str = JSON.stringify(res.data.data.data); 
+        var json_str2 = JSON.parse(json_str);
+        var json_str3 = JSON.parse(json_str2);
 
-      for(let key in json_str3){
-        var newInput = document.createElement("input")
-        if(key == "subOrders") {
-          newInput.name = key
-          newInput.type = "text"
-          newInput.value = JSON.stringify(json_str3.subOrders)
-          document.forms[0].appendChild(newInput)
-        } else {
-          newInput.name = key
-          newInput.type = "text"
-          newInput.value = json_str3[key]
-          document.forms[0].appendChild(newInput)
+        for(let key in json_str3){
+          var newInput = document.createElement("input")
+          if(key == "subOrders") {
+            newInput.name = key
+            newInput.type = "text"
+            newInput.value = JSON.stringify(json_str3.subOrders)
+            document.forms[0].appendChild(newInput)
+          } else {
+            newInput.name = key
+            newInput.type = "text"
+            newInput.value = json_str3[key]
+            document.forms[0].appendChild(newInput)
+          }
         }
+        document.forms[0].action = url
+        document.forms[0].submit()
       }
-      document.forms[0].action = url
-      document.forms[0].submit()
     },
   }
 }

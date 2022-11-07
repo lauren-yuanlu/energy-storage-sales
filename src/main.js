@@ -40,7 +40,8 @@ router.beforeEach((to, from, next) => {
 
     var code = returnParam['code']
     if(!code) {
-      window.location.href = "https://apiqa.lshmec.cn/4WX/commons/weChatOfficial/loginSilented?appCode=energy&url=" +  encodeURIComponent(window.location.href)
+      // return window.location.href = "https://apiqa.lshmec.cn/4WX/commons/weChatOfficial/loginSilented?appCode=energy&url=" +  encodeURIComponent(window.location.href) //测试
+      return window.location.href = "https://wx.lsh-cat.com/commons/weChatOfficial/loginSilented?appCode=energy&url=" +  encodeURIComponent(window.location.href) //正式
     }
     let params1 = {
       loginType: 1,
